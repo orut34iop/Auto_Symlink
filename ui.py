@@ -4,6 +4,7 @@ import os
 import pyperclip
 from tkinter import messagebox, ttk, filedialog
 import yaml
+from autosync.MetadataCopyer import MetadataCopyer
 
 
 def validate_inputs():
@@ -86,8 +87,52 @@ def load_config():
 def on_sync_all():
     """一键全同步按钮点击事件"""
     if save_config():
-        # 这里可以添加其他同步相关的代码
-        pass
+        try:
+            # 获取基本配置信息
+            target_folder = target_entry.get().strip()
+            thread_count = int(thread_spinbox.get().strip())
+            metadata_extensions = tuple(ext.strip() for ext in meta_entry.get().strip().split(';'))
+            
+            # 获取路径列表
+            path_list = output_text.get(1.0, tk.END).strip().split('\n')
+            if not path_list or not path_list[0]:
+                messagebox.showwarning("提示", "路径列表为空")
+                return
+                
+            total_time = 0
+            total_copied = 0
+            total_existing = 0
+            
+            # 处理每个源文件夹
+            for source_path in path_list:
+                if not source_path.strip():
+                    continue
+                    
+                copyer = MetadataCopyer(
+                    source_folder=source_path.strip(),
+                    target_folder=target_folder,
+                    allowed_extensions=metadata_extensions,
+                    num_threads=thread_count
+                )
+                
+                # 运行元数据复制
+                time_taken, message = copyer.run()
+                total_time += time_taken
+                total_copied += copyer.copied_metadatas
+                total_existing += copyer.existing_links
+            
+            # 显示总结信息
+            summary = (
+                f"元数据同步完成\n"
+                f"总耗时: {total_time:.2f} 秒\n"
+                f"总处理文件数: {total_copied + total_existing}\n"
+                f"新复制文件数: {total_copied}\n"
+                f"跳过文件数: {total_existing}"
+            )
+            messagebox.showinfo("同步完成", summary)
+            
+        except Exception as e:
+            messagebox.showerror("错误", f"同步过程中出错：{str(e)}")
 
 def export_to_clipboard():
     """导出内容到剪贴板，使用消息框提供操作反馈"""
