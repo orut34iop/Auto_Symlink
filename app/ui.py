@@ -3,9 +3,8 @@ from tkinterdnd2 import TkinterDnD, DND_FILES
 import os
 import pyperclip
 from tkinter import messagebox, ttk, filedialog
-import configparser
+import yaml
 
-class_dict = {'AutoSync':AutoSync}
 
 def validate_inputs():
     """验证所有输入是否为空"""
@@ -24,58 +23,61 @@ def validate_inputs():
     return True
 
 def save_config():
-    """保存配置到config.ini文件"""
+    """保存配置到config.yaml文件"""
     if not validate_inputs():
         return False
         
-    config = configparser.ConfigParser()
-    config['Settings'] = {
-        'source_folder': source_entry.get().strip(),
-        'target_folder': target_entry.get().strip(),
-        'thread_count': thread_spinbox.get().strip(),
-        'soft_link_extensions': soft_link_entry.get().strip(),
-        'metadata_extensions': meta_entry.get().strip(),
-        'path_list': output_text.get(1.0, tk.END).strip()  # 保存文本区域内容
+    config = {
+        'Settings': {
+            'source_folder': source_entry.get().strip(),
+            'target_folder': target_entry.get().strip(),
+            'thread_count': thread_spinbox.get().strip(),
+            'soft_link_extensions': soft_link_entry.get().strip(),
+            'metadata_extensions': meta_entry.get().strip(),
+            'path_list': output_text.get(1.0, tk.END).strip()  # 保存文本区域内容
+        }
     }
     
     try:
-        with open('config.ini', 'w', encoding='utf-8') as configfile:
-            config.write(configfile)
-        messagebox.showinfo("成功", "配置已保存到config.ini")
+        with open('config/config.yaml', 'w', encoding='utf-8') as configfile:
+            yaml.dump(config, configfile, allow_unicode=True, default_flow_style=False)
+        messagebox.showinfo("成功", "配置已保存到config/config.yaml")
         return True
     except Exception as e:
         messagebox.showerror("错误", f"保存配置文件时出错：{str(e)}")
         return False
 
 def load_config():
-    """从config.ini文件加载配置"""
-    if not os.path.exists('config.ini'):
+    """从config.yaml文件加载配置"""
+    if not os.path.exists('config/config.yaml'):
         return
         
-    config = configparser.ConfigParser()
     try:
-        config.read('config.ini', encoding='utf-8')
-        if 'Settings' in config:
+        with open('config/config.yaml', 'r', encoding='utf-8') as configfile:
+            config = yaml.safe_load(configfile)
+            
+        if config and 'Settings' in config:
+            settings = config['Settings']
             source_entry.delete(0, tk.END)
-            source_entry.insert(0, config['Settings'].get('source_folder', ''))
+            source_entry.insert(0, settings.get('source_folder', ''))
             
             target_entry.delete(0, tk.END)
-            target_entry.insert(0, config['Settings'].get('target_folder', ''))
+            target_entry.insert(0, settings.get('target_folder', ''))
             
             thread_spinbox.delete(0, tk.END)
-            thread_spinbox.insert(0, config['Settings'].get('thread_count', '5'))
+            thread_spinbox.insert(0, settings.get('thread_count', '5'))
             
             soft_link_entry.delete(0, tk.END)
-            soft_link_entry.insert(0, config['Settings'].get('soft_link_extensions', 
+            soft_link_entry.insert(0, settings.get('soft_link_extensions', 
                 '.mkv;.iso;.ts;.mp4;.avi;.rmvb;.wmv;.m2ts;.mpg;.flv;.rm'))
             
             meta_entry.delete(0, tk.END)
-            meta_entry.insert(0, config['Settings'].get('metadata_extensions',
+            meta_entry.insert(0, settings.get('metadata_extensions',
                 '.nfo;.jpg;.png;.svg;.ass;.srt;.sup'))
                 
             # 加载文本区域内容
             output_text.delete(1.0, tk.END)
-            path_list = config['Settings'].get('path_list', '')
+            path_list = settings.get('path_list', '')
             if path_list:
                 output_text.insert(tk.END, path_list)
     except Exception as e:
