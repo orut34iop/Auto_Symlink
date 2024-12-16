@@ -51,6 +51,8 @@ def save_config():
     }
     
     try:
+        # 确保config目录存在
+        os.makedirs(os.path.dirname('config/config.yaml'), exist_ok=True)
         with open('config/config.yaml', 'w', encoding='utf-8') as configfile:
             yaml.dump(config, configfile, allow_unicode=True, default_flow_style=False)
         messagebox.showinfo("成功", "配置已保存到config/config.yaml")
