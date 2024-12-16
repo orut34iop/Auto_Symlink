@@ -8,6 +8,11 @@ from tkinter import messagebox, ttk, filedialog
 import yaml
 from autosync.MetadataCopyer import MetadataCopyer
 from autosync.SymlinkCreator import SymlinkCreator
+from utils.logger import print_message
+from threading import Thread
+import time
+import queue
+
 
 def request_admin_privileges():
     """请求管理员权限"""
@@ -55,10 +60,12 @@ def save_config():
         os.makedirs(os.path.dirname('config/config.yaml'), exist_ok=True)
         with open('config/config.yaml', 'w', encoding='utf-8') as configfile:
             yaml.dump(config, configfile, allow_unicode=True, default_flow_style=False)
-        messagebox.showinfo("成功", "配置已保存到config/config.yaml")
+        print_message("配置已保存到config/config.yaml")
         return True
     except Exception as e:
-        messagebox.showerror("错误", f"保存配置文件时出错：{str(e)}")
+        error_msg = f"保存配置文件时出错：{str(e)}"
+        print_message(error_msg)
+        messagebox.showerror("错误", error_msg)
         return False
 
 def load_config():
@@ -94,15 +101,15 @@ def load_config():
             path_list = settings.get('path_list', '')
             if path_list:
                 output_text.insert(tk.END, path_list)
+            print_message("配置已加载")
     except Exception as e:
-        messagebox.showerror("错误", f"加载配置文件时出错：{str(e)}")
+        error_msg = f"加载配置文件时出错：{str(e)}"
+        print_message(error_msg)
+        #messagebox.showerror("错误", error_msg)
 
 def on_sync_all():
     """一键全同步按钮点击事件"""
-
-
     if save_config():
-
         # 请求管理员权限
         if not request_admin_privileges():
             sys.exit()
@@ -117,7 +124,8 @@ def on_sync_all():
             # 获取路径列表
             path_list = output_text.get(1.0, tk.END).strip().split('\n')
             if not path_list or not path_list[0]:
-                messagebox.showwarning("提示", "路径列表为空")
+                print_message("路径列表为空")
+                #messagebox.showwarning("提示", "路径列表为空")
                 return
                 
             total_time = 0
@@ -129,6 +137,7 @@ def on_sync_all():
                 if not source_path.strip():
                     continue
                     
+                print_message(f"开始处理源文件夹: {source_path}")
                 copyer = MetadataCopyer(
                     source_folder=source_path.strip(),
                     target_folder=target_folder,
@@ -141,6 +150,7 @@ def on_sync_all():
                 total_time += time_taken
                 total_copied += copyer.copied_metadatas
                 total_existing += copyer.existing_links
+                print_message(message)
             
             # 显示总结信息
             summary = (
@@ -150,16 +160,19 @@ def on_sync_all():
                 f"新复制文件数: {total_copied}\n"
                 f"跳过文件数: {total_existing}"
             )
-            messagebox.showinfo("同步完成", summary)
+            print_message(summary)
+            #messagebox.showinfo("同步完成", summary)
             
             total_time = 0
             total_created_links = 0
 
             # 每个源文件夹创建符号链接
+            '''
             for source_path in path_list:
                 if not source_path.strip():
                     continue
                     
+                print_message(f"开始创建符号链接: {source_path}")
                 creater = SymlinkCreator(
                     source_folder=source_path.strip(),
                     target_folder=target_folder,
@@ -171,6 +184,7 @@ def on_sync_all():
                 time_taken, message = creater.run()
                 total_time += time_taken
                 total_created_links += creater.created_links
+                print_message(message)
             
             # 显示总结信息
             summary = (
@@ -178,11 +192,13 @@ def on_sync_all():
                 f"总耗时: {total_time:.2f} 秒\n"
                 f"总创建符号链接文件数: {total_created_links}\n"
             )
-            messagebox.showinfo("同步完成", summary)
-
-
+            print_message(summary)
+            #messagebox.showinfo("同步完成", summary)
+            '''     
         except Exception as e:
-            messagebox.showerror("错误", f"同步过程中出错：{str(e)}")
+            error_msg = f"同步过程中出错：{str(e)}"
+            print_message(error_msg)
+            #messagebox.showerror("错误", error_msg)
 
 def export_to_clipboard():
     """导出内容到剪贴板，使用消息框提供操作反馈"""
@@ -190,16 +206,21 @@ def export_to_clipboard():
         content = output_text.get(1.0, tk.END).strip()
         if content:
             pyperclip.copy(content)
+            print_message("内容已复制到剪贴板")
             messagebox.showinfo("成功", "内容已复制到剪贴板")
         else:
+            print_message("输出框为空，无法导出")
             messagebox.showwarning("提示", "输出框为空，无法导出")
     except Exception as e:
-        messagebox.showerror("错误", f"复制到剪贴板时出错：{str(e)}")
+        error_msg = f"复制到剪贴板时出错：{str(e)}"
+        print_message(error_msg)
+        messagebox.showerror("错误", error_msg)
 
 def clear_all():
     """清空所有输入和输出内容"""
     source_entry.delete(0, tk.END)
     output_text.delete(1.0, tk.END)
+    print_message("已清空所有内容")
 
 def browse_folder(entry):
     """浏览文件夹"""
@@ -207,6 +228,7 @@ def browse_folder(entry):
     if folder:
         entry.delete(0, tk.END)
         entry.insert(0, folder)
+        print_message(f"已选择文件夹: {folder}")
 
 def scan_string(input_string):
     """解析拖拽数据中的路径"""
@@ -246,6 +268,7 @@ def on_source_drop(event):
         new_paths = [path for path in folder_paths if path not in existing_paths]
         
         if not new_paths:
+            print_message("所有拖入的路径都已存在，已自动忽略")
             messagebox.showinfo("提示", "所有拖入的路径都已存在，已自动忽略")
             return
             
@@ -263,14 +286,19 @@ def on_source_drop(event):
         else:
             output_text.insert(tk.END, '\n'.join(new_paths))
         
+        print_message(f"已添加新路径: {', '.join(new_paths)}")
+        
     except Exception as e:
-        messagebox.showerror("错误", f"处理拖拽数据时出错：{str(e)}")
+        error_msg = f"处理拖拽数据时出错：{str(e)}"
+        print_message(error_msg)
+        messagebox.showerror("错误", error_msg)
 
 def on_target_drop(event):
     """处理目标文件夹拖拽事件"""
     try:
         folder_paths = scan_string(event.data)
         if len(folder_paths) > 1:
+            print_message("目标文件夹只能拖入单个文件夹")
             messagebox.showwarning("提示", "目标文件夹只能拖入单个文件夹")
             return
         
@@ -279,19 +307,35 @@ def on_target_drop(event):
             if os.path.isdir(folder_path):
                 target_entry.delete(0, tk.END)
                 target_entry.insert(0, os.path.abspath(folder_path))
+                print_message(f"已设置目标文件夹: {folder_path}")
             else:
+                print_message("请拖入文件夹而不是文件")
                 messagebox.showwarning("提示", "请拖入文件夹而不是文件")
         
     except Exception as e:
-        messagebox.showerror("错误", f"处理拖拽数据时出错：{str(e)}")
+        error_msg = f"处理拖拽数据时出错：{str(e)}"
+        print_message(error_msg)
+        messagebox.showerror("错误", error_msg)
 
 
+# 定义一个函数，用于在主线程中处理消息并更新UI
+def process_messages(root, output_box, queue):
+
+    if not queue.empty():
+        message = queue.get()
+        #if message is None:
+        #    return  # 没有新消息，退出
+        # 将消息添加到输出框
+        output_box.insert(tk.END, message + '\n')
+        # 自动滚动到最新内容
+        output_box.see(tk.END)
+        # 安排下一次更新
+    root.after(100, process_messages, root, output_box, queue)
 
 # 创建主窗口
 root = TkinterDnD.Tk()
-root.title("115网盘文件共路径生成器")
-root.geometry("800x600")
-
+root.title("符号链接文件生成器")
+root.geometry("800x1024")
 
 # 创建主框架
 frame = ttk.Frame(root, padding=10)
@@ -370,12 +414,35 @@ for btn_text, cmd in buttons:
     btn = ttk.Button(button_frame, text=btn_text, command=cmd)
     btn.pack(side=tk.LEFT, padx=2)
 
+# 输出框区域
+output_frame = ttk.LabelFrame(frame, text="日志", padding=5)
+output_frame.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+output_box = tk.Text(output_frame, height=64, wrap=tk.WORD)
+output_box.pack(fill=tk.BOTH, expand=True)
+scrollbar = ttk.Scrollbar(output_frame, orient="vertical", command=output_box.yview)
+scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+output_box.configure(yscrollcommand=scrollbar.set)
+
+# 创建一个队列用于线程间通信
+message_queue = queue.Queue()
+
+# 设置输出框到print_message函数
+#print_message.output_box = output_box
+#print_message.root = root
+print_message.message_queue = message_queue
+
 # 绑定拖拽事件
 source_entry.drop_target_register(DND_FILES)
 source_entry.dnd_bind('<<Drop>>', on_source_drop)
 
 target_entry.drop_target_register(DND_FILES)
 target_entry.dnd_bind('<<Drop>>', on_target_drop)
+
+
+
+# 启动主线程中的消息处理
+process_messages(root, output_box, message_queue)
+
 
 # 加载配置
 load_config()

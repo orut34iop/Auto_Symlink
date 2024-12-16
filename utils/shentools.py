@@ -15,7 +15,7 @@ symlink_name_dict = {"symlink":"软链接","strm":"strm文件"}
 def print_message(message):
     timestamp = datetime.now().strftime("[%Y/%m/%d %H:%M:%S]")
     trim_log_file('./config/auto_symlink.log')
-    # print(f"{timestamp}{message}")
+    #print(f"{message}")
     logging.info(message)
 
 def print_backup_message(output_text):
