@@ -160,6 +160,13 @@ class SymlinkCreator:
         start_time = time.time()
         print_message(f"开始更新{self.symlink_name}...")
         # logging.info(f"开始更新{self.symlink_name}...")
+
+        # 创建与源文件夹同名的目标文件夹
+        source_name = os.path.basename(os.path.normpath(self.source_folder))
+        new_target_folder = os.path.join(self.target_folder, source_name)
+        os.makedirs(new_target_folder, exist_ok=True)
+        self.target_folder = new_target_folder  # 更新目标文件夹路径
+
         threads = []
 
         for i in range(self.num_threads):

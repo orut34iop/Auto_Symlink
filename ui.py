@@ -1,11 +1,22 @@
 import tkinter as tk
 from tkinterdnd2 import TkinterDnD, DND_FILES
 import os
+import sys
+import ctypes
 import pyperclip
 from tkinter import messagebox, ttk, filedialog
 import yaml
 from autosync.MetadataCopyer import MetadataCopyer
+from autosync.SymlinkCreator import SymlinkCreator
 
+def request_admin_privileges():
+    """请求管理员权限"""
+    if ctypes.windll.shell32.IsUserAnAdmin():
+        return True
+    else:
+        # 以管理员权限重新启动脚本
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+        return False
 
 def validate_inputs():
     """验证所有输入是否为空"""
@@ -86,12 +97,20 @@ def load_config():
 
 def on_sync_all():
     """一键全同步按钮点击事件"""
+
+
     if save_config():
+
+        # 请求管理员权限
+        if not request_admin_privileges():
+            sys.exit()
+        
         try:
             # 获取基本配置信息
             target_folder = target_entry.get().strip()
             thread_count = int(thread_spinbox.get().strip())
             metadata_extensions = tuple(ext.strip() for ext in meta_entry.get().strip().split(';'))
+            soft_link_extensions = tuple(ext.strip() for ext in soft_link_entry.get().strip().split(';'))
             
             # 获取路径列表
             path_list = output_text.get(1.0, tk.END).strip().split('\n')
@@ -131,6 +150,35 @@ def on_sync_all():
             )
             messagebox.showinfo("同步完成", summary)
             
+            total_time = 0
+            total_created_links = 0
+
+            # 每个源文件夹创建符号链接
+            for source_path in path_list:
+                if not source_path.strip():
+                    continue
+                    
+                creater = SymlinkCreator(
+                    source_folder=source_path.strip(),
+                    target_folder=target_folder,
+                    allowed_extensions=soft_link_extensions,
+                    num_threads=thread_count
+                )
+                
+                # 运行符号链接创建
+                time_taken, message = creater.run()
+                total_time += time_taken
+                total_created_links += creater.created_links
+            
+            # 显示总结信息
+            summary = (
+                f"符号链接创建完成\n"
+                f"总耗时: {total_time:.2f} 秒\n"
+                f"总创建符号链接文件数: {total_created_links}\n"
+            )
+            messagebox.showinfo("同步完成", summary)
+
+
         except Exception as e:
             messagebox.showerror("错误", f"同步过程中出错：{str(e)}")
 
@@ -235,10 +283,13 @@ def on_target_drop(event):
     except Exception as e:
         messagebox.showerror("错误", f"处理拖拽数据时出错：{str(e)}")
 
+
+
 # 创建主窗口
 root = TkinterDnD.Tk()
 root.title("115网盘文件共路径生成器")
 root.geometry("800x600")
+
 
 # 创建主框架
 frame = ttk.Frame(root, padding=10)
