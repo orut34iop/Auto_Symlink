@@ -161,13 +161,11 @@ def on_sync_all():
                 f"跳过文件数: {total_existing}"
             )
             print_message(summary)
-            #messagebox.showinfo("同步完成", summary)
             
             total_time = 0
             total_created_links = 0
 
             # 每个源文件夹创建符号链接
-            '''
             for source_path in path_list:
                 if not source_path.strip():
                     continue
@@ -194,7 +192,7 @@ def on_sync_all():
             )
             print_message(summary)
             #messagebox.showinfo("同步完成", summary)
-            '''     
+
         except Exception as e:
             error_msg = f"同步过程中出错：{str(e)}"
             print_message(error_msg)
@@ -323,8 +321,6 @@ def process_messages(root, output_box, queue):
 
     if not queue.empty():
         message = queue.get()
-        #if message is None:
-        #    return  # 没有新消息，退出
         # 将消息添加到输出框
         output_box.insert(tk.END, message + '\n')
         # 自动滚动到最新内容
@@ -427,8 +423,6 @@ output_box.configure(yscrollcommand=scrollbar.set)
 message_queue = queue.Queue()
 
 # 设置输出框到print_message函数
-#print_message.output_box = output_box
-#print_message.root = root
 print_message.message_queue = message_queue
 
 # 绑定拖拽事件
