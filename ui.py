@@ -55,7 +55,7 @@ def save_config():
         os.makedirs(os.path.dirname('config/config.yaml'), exist_ok=True)
         with open('config/config.yaml', 'w', encoding='utf-8') as configfile:
             yaml.dump(config, configfile, allow_unicode=True, default_flow_style=False)
-        messagebox.showinfo("成功", "配置已保存到config/config.yaml")
+        #messagebox.showinfo("成功", "配置已保存到config/config.yaml")
         return True
     except Exception as e:
         messagebox.showerror("错误", f"保存配置文件时出错：{str(e)}")
@@ -289,7 +289,7 @@ def on_target_drop(event):
 
 # 创建主窗口
 root = TkinterDnD.Tk()
-root.title("115网盘文件共路径生成器")
+root.title("符号链接生成器")
 root.geometry("800x600")
 
 
